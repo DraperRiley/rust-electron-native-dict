@@ -21,7 +21,7 @@ async fn hello() -> impl Responder {
     HttpResponse::Ok().body("I cum blood and")
 }
 
-#[get("/dick/")]
+#[get("/test/")]
 async fn dick() -> impl Responder {
-    HttpResponse::Ok().body("Dicks")
+    HttpResponse::Ok().body("test")
 }
