@@ -9,7 +9,7 @@ pub async fn run() -> std::io::Result<()> {
         App::new()
             .wrap(middleware::Logger::default())
             .service(hello)
-            .service(dick)
+            .service(test)
     })
     .bind(("192.168.0.245", 8080))?
     .run()
@@ -18,10 +18,10 @@ pub async fn run() -> std::io::Result<()> {
 
 #[get("/")]
 async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("I cum blood and")
+    HttpResponse::Ok().body("main entry")
 }
 
 #[get("/test/")]
-async fn dick() -> impl Responder {
+async fn test() -> impl Responder {
     HttpResponse::Ok().body("test")
 }
