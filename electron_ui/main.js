@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron')
 const { net } = require('electron');
+var serverDead = false;
 
 const createWindow = () => {
     const win = new BrowserWindow({
@@ -39,6 +40,7 @@ let killRustServer = () => {
             request.on("end", () => {
                 const json = Buffer.concat(data).toString();
                 console.log(`JSON: ${json}`);
+                serverDead = true;
                 app.quit();
             });
 
@@ -61,17 +63,17 @@ let killRustServer = () => {
 
         });
 
-        //app.quit();
         request.end()
     }
     catch(e){
         reject(e);
-        //app.quit();
     }
 }
 
+// here we kill the rust backend
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
+        serverDead = true;
         killRustServer();
     }
 })
@@ -82,8 +84,11 @@ process.on('uncaughtException', (err) => {
         title: "Error in main process"
     };
 
-    console.log("Error: " + err.message);
+    // Only quit if server has been killed
+    if (serverDead) {
+        console.log("Server should be killed")
+        app.quit();
+    }
 
-    // dialog.showMessageBoxSync(messageBoxOptions);
-    app.quit();
+    console.log("Error: " + err.message);
 });
