@@ -9,5 +9,4 @@ The repository is [HERE](https://gitlab.com/yamagoya/jmdictdb)
 
 ## Disclaimer
 
-This stuff is bad
-don't use it
+This stuff is bad don't use it
