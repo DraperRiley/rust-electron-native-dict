@@ -3,17 +3,15 @@ import logging
 import sqlite3
 import re
 from create_db import CreateDB
+from dictenum import EJMDict
 
 logging.basicConfig(level=logging.DEBUG)
 
 def main():
 
-    # CreateDB.create_db()
-
-    conn = sqlite3.connect('jmedict.db')
-
-    xmlfile = 'JMdict_e'
-    tree = ET.parse(xmlfile)
+    CreateDB.create_db()
+    conn = sqlite3.connect(EJMDict.DBFILE)
+    tree = ET.parse(EJMDict.FILE)
 
     jmdict = tree.getroot()
     items = []
@@ -126,14 +124,14 @@ def main():
 
         try:
 
-            conn.execute("INSERT INTO K_ELE (ENT_SEQ, KEB, KE_INF, KE_PRI) \
-                         VALUES ({}, \'{}\', \'{}\', \'{}\');".format(ent_seq, keb, ke_inf, ke_pri))
+            #conn.execute("INSERT INTO K_ELE (ENT_SEQ, KEB, KE_INF, KE_PRI) \
+            #             VALUES ({}, \'{}\', \'{}\', \'{}\');".format(ent_seq, keb, ke_inf, ke_pri))
 
-            conn.execute("INSERT INTO R_ELE (ENT_SEQ, REB, RE_NOKANJI, RE_RESTR, RE_INF, RE_PRI) \
-                        VALUES ({}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\');".format(ent_seq, reb, re_nokanji, re_restr, re_inf, re_pri))
+            #conn.execute("INSERT INTO R_ELE (ENT_SEQ, REB, RE_NOKANJI, RE_RESTR, RE_INF, RE_PRI) \
+            #            VALUES ({}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\');".format(ent_seq, reb, re_nokanji, re_restr, re_inf, re_pri))
 
-            conn.execute("INSERT INTO SENSE (ENT_SEQ, STAGK, STAGR, POS, XREF, ANT, FIELD, MISC, S_INF, LSOURCE, DIAL, GLOSS) \
-                        VALUES ({}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\');".format(ent_seq, stagk, stagr, pos, xref, ant, field, misc, s_inf, lsource, dial, gloss))
+            #conn.execute("INSERT INTO SENSE (ENT_SEQ, STAGK, STAGR, POS, XREF, ANT, FIELD, MISC, S_INF, LSOURCE, DIAL, GLOSS) \
+            #            VALUES ({}, \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\', \'{}\');".format(ent_seq, stagk, stagr, pos, xref, ant, field, misc, s_inf, lsource, dial, gloss))
 
             conn.commit()
 

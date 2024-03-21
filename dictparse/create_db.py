@@ -1,53 +1,411 @@
 import sqlite3
 import os
+from dictenum import EJMDict
+from fillkwtables import ParseKW
 
 class CreateDB:
-
+    
     @staticmethod
     def create_db():
 
         os.chdir('.')
-        db_file = '..\\etc\\jmedict.db'
 
-        if os.path.exists(db_file):
-            os.remove(db_file)
+        if os.path.exists(EJMDict.DBFILE):
+            # os.remove(EJMDict.DBFILE)
+            print("DB file already exists")
+            return
 
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(EJMDict.DBFILE)
         cursor = conn.cursor()
 
-        # create k_ele table THIS IS THE PRIMARY TABLE
-        conn.execute('''CREATE TABLE K_ELE(
-        ENT_SEQ INTEGER PRIMARY KEY NOT NULL,
-        KEB TEXT,
-        KE_INF TEXT,
-        KE_PRI TEXT);''')
+        CreateDB.create_kw_tables(conn)
 
-        conn.execute('''CREATE TABLE R_ELE(
-        ENT_SEQ INTEGER NOT NULL,
-        REB TEXT,
-        RE_NOKANJI TEXT,
-        RE_RESTR TEXT,
-        RE_INF TEXT,
-        RE_PRI TEXT,
-        FOREIGN KEY(ENT_SEQ) REFERENCES K_ELE(ENT_SEQ));''')
+        # Create ENTR table TOP LEVEL TABLE
+        conn.execute(
+            '''CREATE TABLE ENTR (
+                ID INTEGER PRIMARY KEY AUTOINCREMENT,
+                SRC INTEGER,
+                STAT INTEGER,
+                SEQ INTEGER,
+                DFRM INTEGER,
+                UNAP INTEGER,
+                SRCNOTE TEXT,
+                NOTES TEXT,
+                IDX INTEGER,
+                FOREIGN KEY(SRC) REFERENCES KWSRC(ID),
+                FOREIGN KEY(STAT) REFERENCES KWSTAT(ID)
+            )'''
+        )
 
-        conn.execute('''CREATE TABLE SENSE
-        (ENT_SEQ INTEGER NOT NULL,
-        STAGK TEXT,
-        STAGR TEXT,
-        POS TEXT,
-        XREF TEXT,
-        ANT TEXT,
-        FIELD TEXT,
-        MISC TEXT,
-        S_INF TEXT,
-        LSOURCE TEXT,
-        DIAL TEXT,
-        GLOSS TEXT,
-        FOREIGN KEY(ENT_SEQ) REFERENCES K_ELE(ENT_SEQ));''')
+        # CREATE SECOND LEVEL TABLES
+
+        conn.execute(
+            '''CREATE TABLE SENS (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                NOTES TEXT,
+                PRIMARY KEY (ENTR, SENS),
+                FOREIGN KEY(ENTR) REFERENCES ENTR(SRC)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KANJ (
+                ENTR INTEGER NOT NULL,
+                KANJ INTEGER NOT NULL,
+                TXT TEXT,
+                PRIMARY KEY(ENTR, KANJ),
+                FOREIGN KEY(ENTR) REFERENCES ENTR(SRC)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE RDNG (
+                ENTR INTEGER NOT NULL,
+                RDNG INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, RDNG),
+                FOREIGN KEY(ENTR) REFERENCES ENTR(SRC)
+            )'''
+        )
+
+        # We will not be creating the change history table
+        # CREATE THIRD LEVEL TABLES
+
+        conn.execute(
+            '''CREATE TABLE GLOSS (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                GLOSS INTEGER NOT NULL,
+                LANG INTEGER,
+                GINF INTEGER,
+                TXT TEXT,
+                PRIMARY KEY(ENTR, SENS, GLOSS),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(LANG) REFERENCES KWLANG(ID),
+                FOREIGN KEY(GINF) REFERENCES KWGINF(ID)
+            )'''
+        )
+
+        # CREATE ATTRIBUTE LIST TABLES
+
+        conn.execute(
+            '''CREATE TABLE KINF (
+                ENTR INTEGER NOT NULL,
+                KANJ INTEGER NOT NULL,
+                ORD INTEGER,
+                KW INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, KANJ, KW),
+                FOREIGN KEY(ENTR) REFERENCES KANJ(ENTR),
+                FOREIGN KEY(KANJ) REFERENCES KANJ(KANJ),
+                FOREIGN KEY(KW) REFERENCES KWKINF(ID)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE FREQ (
+                ENTR INTEGER NOT NULL,
+                RDNG INTEGER NOT NULL,
+                KANJ INTEGER NOT NULL,
+                KW INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, RDNG, KANJ, KW),
+                FOREIGN KEY(ENTR) REFERENCES KANJ(ENTR),
+                FOREIGN KEY(ENTR) REFERENCES RDNG(ENTR),
+                FOREIGN KEY(KANJ) REFERENCES KANJ(KANJ),
+                FOREIGN KEY(KW) REFERENCES KWFREQ(ID)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE RINF (
+                ENTR INTEGER NOT NULL,
+                RDNG INTEGER NOT NULL,
+                ORD INTEGER,
+                KW INTEGER,
+                PRIMARY KEY(ENTR, RDNG, KW),
+                FOREIGN KEY(ENTR) REFERENCES RDNG(ENTR),
+                FOREIGN KEY(RDNG) REFERENCES RDNG(RDNG),
+                FOREIGN KEY(KW) REFERENCES KWRINF(ID)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE POS (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                ORD INTEGER,
+                KW INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, SENS, KW),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(KW) REFERENCES KWPOS(ID)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE MISC (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                ORD INTEGER,
+                KW INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, SENS, KW),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(KW) REFERENCES KWMISC(ID)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE FLD (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                ORD INTEGER,
+                KW INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, SENS, KW),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(KW) REFERENCES KWFLD(ID)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE DIAL (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                ORD INTEGER,
+                KW INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, SENS, KW),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(KW) REFERENCES KWDIAL(ID)    
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE LSOURCE (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                ORD INTEGER,
+                LANG INTEGER NOT NULL,
+                TXT TEXT NOT NULL,
+                PART INTEGER,
+                WASEI INTEGER,
+                PRIMARY KEY(ENTR, SENS, LANG, TXT),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(LANG) REFERENCES KWLANG(ID)
+            )'''
+        )
+
+        # CREATE RESTRICTION TABLES
+
+        conn.execute(
+            '''CREATE TABLE STAGK (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                KANJ INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, SENS, KANJ),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(ENTR) REFERENCES KANJ(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(KANJ) REFERENCES KANJ(KANJ)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE STAGR (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                RDNG INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, SENS, RDNG),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(ENTR) REFERENCES RDNG(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(RDNG) REFERENCES RDNG(RDNG)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE RESTR (
+                ENTR INTEGER NOT NULL,
+                RDNG INTEGER NOT NULL,
+                KANJ INTEGER NOT NULL,
+                PRIMARY KEY(ENTR, RDNG, KANJ),
+                FOREIGN KEY(ENTR) REFERENCES RDNG(ENTR),
+                FOREIGN KEY(ENTR) REFERENCES KANJ(ENTR),
+                FOREIGN KEY(RDNG) REFERENCES RDNG(RDNG),
+                FOREIGN KEY(KANJ) REFERENCES KANJ(KANJ)
+            )'''
+        )
+
+        # CREATE CROSS-REFERENCE TABLES
+
+        conn.execute(
+            '''CREATE TABLE XREF (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                XREF INTEGER NOT NULL,
+                TYP INTEGER,
+                XENTR INTEGER NOT NULL,
+                XSENS INTEGER NOT NULL,
+                RDNG INTEGER,
+                KANJ INTEGER,
+                NOTES TEXT,
+                NOSENS INTEGER,
+                LOWPRI INTEGER,
+                PRIMARY KEY(ENTR, SENS, XREF, XENTR, XSENS),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(TYP) REFERENCES KWXREF(ID),
+                FOREIGN KEY(XENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(XENTR) REFERENCES RDNG(ENTR),
+                FOREIGN KEY(XENTR) REFERENCES KANJ(ENTR),
+                FOREIGN KEY(XSENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(RDNG) REFERENCES RDNG(RDNG),
+                FOREIGN KEY(KANJ) REFERENCES KANJ(KANJ)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE XRESOLV (
+                ENTR INTEGER NOT NULL,
+                SENS INTEGER NOT NULL,
+                ORD INTEGER NOT NULL,
+                TYP INTEGER NOT NULL,
+                RTXT TEXT,
+                KTXT TEXT,
+                TSENS INTEGER,
+                VSRC INTEGER,
+                VSEQ INTEGER,
+                NOTES TEXT,
+                PRIO INTEGER,
+                PRIMARY KEY(ENTR, SENS, ORD, TYP),
+                FOREIGN KEY(ENTR) REFERENCES SENS(ENTR),
+                FOREIGN KEY(SENS) REFERENCES SENS(SENS),
+                FOREIGN KEY(TYP) REFERENCES KWXREF(KW)
+            )'''
+        )
 
         return 0
-    
+
+    def create_kw_tables(conn):
+
+        # CREATE KEYWORD TABLES
+
+        conn.execute(
+            '''CREATE TABLE KWPOS (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWMISC (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWFLD (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWDIAL (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWLANG (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWXREF (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWGINF (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWKINF (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWFREQ (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWRINF (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWSRC (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT,
+                DT TEXT,
+                NOTES TEXT,
+                SEQ TEXT NOT NULL,
+                SINC INTEGER,
+                SMIN INTEGER,
+                SMAX INTEGER,
+                SRCT INTEGER NOT NULL,
+                FOREIGN KEY(SRCT) REFERENCES KWSRCT(ID)
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWSRCT (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
+        conn.execute(
+            '''CREATE TABLE KWSTAT (
+                ID INTEGER PRIMARY KEY NOT NULL,
+                KW TEXT,
+                DESCR TEXT
+            )'''
+        )
+
 if __name__ == '__main__':
     CreateDB.create_db()
+    conn = sqlite3.connect(EJMDict.DBFILE)
+    ParseKW.fill_kw_tables(conn)
 
