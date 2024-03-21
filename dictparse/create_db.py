@@ -1,19 +1,22 @@
 import sqlite3
 import os
-from dictenum import EJMDict
+from dictenum import *
 from fillkwtables import ParseKW
+from optparse import OptionParser
 
 class CreateDB:
     
     @staticmethod
-    def create_db():
+    def create_db(delete_db=False):
 
         os.chdir('.')
 
         if os.path.exists(EJMDict.DBFILE):
-            # os.remove(EJMDict.DBFILE)
             print("DB file already exists")
-            return
+            if delete_db:
+                print("Deleting DB file ", EJMDict.DBFILE)
+                os.remove(EJMDict.DBFILE)
+            
 
         conn = sqlite3.connect(EJMDict.DBFILE)
         cursor = conn.cursor()
@@ -292,86 +295,21 @@ class CreateDB:
 
         # CREATE KEYWORD TABLES
 
-        conn.execute(
-            '''CREATE TABLE KWPOS (
+        sql_blank = '''CREATE TABLE {table} (
                 ID INTEGER PRIMARY KEY NOT NULL,
                 KW TEXT,
                 DESCR TEXT
             )'''
-        )
 
-        conn.execute(
-            '''CREATE TABLE KWMISC (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
 
-        conn.execute(
-            '''CREATE TABLE KWFLD (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
+        for kw in KW:
+            if kw == KW.SRC:
+                continue
 
-        conn.execute(
-            '''CREATE TABLE KWDIAL (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
-        conn.execute(
-            '''CREATE TABLE KWLANG (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
-        conn.execute(
-            '''CREATE TABLE KWXREF (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
-        conn.execute(
-            '''CREATE TABLE KWGINF (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
-        conn.execute(
-            '''CREATE TABLE KWKINF (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
-        conn.execute(
-            '''CREATE TABLE KWFREQ (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
-        conn.execute(
-            '''CREATE TABLE KWRINF (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
+            conn.execute(
+                sql_blank.format(table=kw.value)
+            )
+    
         conn.execute(
             '''CREATE TABLE KWSRC (
                 ID INTEGER PRIMARY KEY NOT NULL,
@@ -388,24 +326,23 @@ class CreateDB:
             )'''
         )
 
-        conn.execute(
-            '''CREATE TABLE KWSRCT (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
-
-        conn.execute(
-            '''CREATE TABLE KWSTAT (
-                ID INTEGER PRIMARY KEY NOT NULL,
-                KW TEXT,
-                DESCR TEXT
-            )'''
-        )
+        return
 
 if __name__ == '__main__':
-    CreateDB.create_db()
+
+    parser = OptionParser()
+    parser.add_option("-d",
+                      "--delete",
+                      action="store_true",
+                      dest="delete",
+                      help="Delete existing .db file"
+        )
+
+    (options, args) = parser.parse_args()
+
+    CreateDB.create_db(options.delete)
     conn = sqlite3.connect(EJMDict.DBFILE)
     ParseKW.fill_kw_tables(conn)
+
+    # TODO: Parse the entire XML file
 

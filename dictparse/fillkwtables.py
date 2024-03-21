@@ -1,11 +1,10 @@
-from dictenum import EJMDict
-from dictenum import KWHeader
+from dictenum import *
 import re
 
 class ParseKW:
 
     # like <!ENTITY ornith "ornithology">
-    entity_re = "<!ENTITY\\s([a-zA-Z0-9\-]+)\\s\"(.+)\""
+    entity_re = "<!ENTITY\\s([a-zA-Z0-9-]+)\\s\"(.+)\""
     insert_str = '''INSERT INTO 
         {table} (
             KW, DESCR
@@ -55,28 +54,27 @@ class ParseKW:
             x = None
 
             if current == dial:
-                x = ParseKW.insert_str.format(table="KWDIAL", val1=res[0][0], val2=res[0][1])
-                print(x)
+                x = ParseKW.insert_str.format(table=KW.DIAL.value, val1=res[0][0], val2=res[0][1])
                 conn.execute(x)
 
             elif current == field:
-                x = ParseKW.insert_str.format(table="KWFLD", val1=res[0][0], val2=res[0][1])
+                x = ParseKW.insert_str.format(table=KW.FLD.value, val1=res[0][0], val2=res[0][1])
                 conn.execute(x)
 
             elif current == ke_inf:
-                x = ParseKW.insert_str.format(table="KWKINF", val1=res[0][0], val2=res[0][1])
+                x = ParseKW.insert_str.format(table=KW.KINF.value, val1=res[0][0], val2=res[0][1])
                 conn.execute(x)
 
             elif current == misc:
-                x = ParseKW.insert_str.format(table="KWMISC", val1=res[0][0], val2=res[0][1])
+                x = ParseKW.insert_str.format(table=KW.MISC.value, val1=res[0][0], val2=res[0][1])
                 conn.execute(x)
 
             elif current == pos:
-                x = ParseKW.insert_str.format(table="KWPOS", val1=res[0][0], val2=res[0][1])
+                x = ParseKW.insert_str.format(table=KW.POS.value, val1=res[0][0], val2=res[0][1])
                 conn.execute(x)
 
             elif current == re_inf:
-                x = ParseKW.insert_str.format(table="KWRINF", val1=res[0][0], val2=res[0][1])
+                x = ParseKW.insert_str.format(table=KW.RINF.value, val1=res[0][0], val2=res[0][1])
                 conn.execute(x)
 
             else:

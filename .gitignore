@@ -3,3 +3,4 @@
 /electron_ui/node_modules/
 tools/
 TODO.txt
+dictparse/__pycache__/
